@@ -1,4 +1,5 @@
-'''Portifolio object'''
+'''Symbol object'''
+# pylint: disable=C0103,E1101
 import datetime as dt
 from dateutil.relativedelta import relativedelta
 import pandas as pd
@@ -9,6 +10,7 @@ import urllib
 class Symbol(object):
 
     WINDOW = 20
+
 
     '''Object for Portifolio.'''
     def __init__(self, symbol_list, interval, weights=None,  start_value=1):
@@ -25,7 +27,7 @@ class Symbol(object):
         self._value = self.get_daily_value(weights=weights, start_value=start_value)
         self._daily_returns = self.get_daily_returns()
         self._annual_returns = self.get_annual_returns()
-    
+
     @property
     def list(self):
         '''List of tickers'''
@@ -45,7 +47,7 @@ class Symbol(object):
     def data(self):
         '''Historical ticker price'''
         return self._data
-    
+
     @property
     def value(self):
         '''Daily value of the symbols'''
@@ -60,7 +62,7 @@ class Symbol(object):
     def annual_returns(self):
         '''Annual returns of tickers'''
         return self._annual_returns
-    
+
     @list.setter
     def list(self, symbol_list):
         '''Alter portifolio ticker list'''
@@ -75,7 +77,7 @@ class Symbol(object):
     def weights(self, weights):
         '''Alter portifolio weights'''
         self._weights = weights
-    
+
     @data.setter
     def data(self, symbol_data):
         '''Alter portifolio data'''
@@ -95,23 +97,24 @@ class Symbol(object):
 
         from_date, to_date = self.get_dates(interval)
         enco = urllib.parse.urlencode
-        base = enco((
-                    ('a', from_date.month), ('b', from_date.day),('c', from_date.year),
-                    ('d', to_date.month), ('e', to_date.day), ('f', to_date.year),
-                    ('g', 'd'),('ignore', '.csv')
+        base = enco((('a', from_date.month), ('b', from_date.day), ('c', from_date.year),
+                     ('d', to_date.month), ('e', to_date.day), ('f', to_date.year),
+                     ('g', 'd'), ('ignore', '.csv')
                     ))
-        symbol_data = pd.DataFrame(index=pd.date_range(start=from_date,end=to_date))
+        symbol_data = pd.DataFrame(index=pd.date_range(start=from_date, end=to_date))
 
-        for i,symbol in enumerate(symbol_list['Yahoo Symbol']):
+        for i, symbol in enumerate(symbol_list['Yahoo Symbol']):
             url = 'http://real-chart.finance.yahoo.com/table.csv?'+enco({'s':symbol})+'&'+ base
             data = pd.read_csv(url, parse_dates=['Date'], index_col='Date')
             symbol_data = symbol_data.join(data['Adj Close'], how='left')
-            symbol_data.rename(columns={data.columns[-1]: symbol_list.ix[i,'Symbol']},
-                           inplace=True)
+            symbol_data.rename(columns={data.columns[-1]: symbol_list.ix[i, 'Symbol']},
+                               inplace=True)
 
-        return symbol_data.dropna(subset=['NSEI'])
+        #
+        #return symbol_data.dropna(subset=['NSEI'])
+        return symbol_data.dropna()
 
-    def get_dates(self, interval = None):
+    def get_dates(self, interval=None):
         '''Generate dates with a specified interval'''
         if interval is None:
             interval == self.interval
@@ -121,20 +124,22 @@ class Symbol(object):
                                             years=1*interval[2])
         return from_date, to_date
 
-    def get_normalised_portifolio(self, data = None):
+    def get_normalised_portifolio(self, data=None):
         '''Normalize price for portifolio based on first day's closing price'''
         if data is None:
             data = self.data
-        return (data / data.ix[0, :])
+        #BUG: if data[0] = NaN entire column becomes NaN
+        normal_df = data/data.apply(lambda x: x[x.first_valid_index()])
+        return normal_df
 
-    def get_daily_value(self,data=None, weights = None, start_value = 10000):
+    def get_daily_value(self, data=None, weights=None, start_value=10000):
         '''Calculate the daily value of the portifolio'''
         # If no values are passed assigning defaults
         if data is None:
             data = self.data
         if weights is None:
             weights = self.weights
-        
+
         # Calculate the daily value
         daily_value = self.get_normalised_portifolio(data) * weights * start_value
         value = pd.DataFrame(daily_value.sum(axis=1), columns=["Value"])
@@ -160,25 +165,25 @@ class Symbol(object):
         '''Calculate the cumulative returns of portifolio'''
         if value is None:
             value = self.value
-    
+
         return (value.iloc[-1] / value.iloc[0]) - 1
 
     def get_rmean(self, data=None):
         '''Get the rolling mean of portifolio'''
         if data is None:
-            pval_df = self.data
+            data = self.data
         return data.rolling(WINDOW).mean()
 
     def get_rsd(self, data=None):
         '''Get the rolling standard deviation of portifolio'''
         if data is None:
-            pval_df = self.data
+            data = self.data
         return data.rolling(WINDOW).std()
 
     def get_bsd(self, data=None):
         '''Calculate Bollinger upper and lower bands of portifolio'''
         if data is None:
-            pval_df = self.data
-        upper_band = data + get_rsd(data) * 2
-        l5ower_band = data - get_rsd(data) * 2
+            data = self.data
+        upper_band = data + self.get_rsd(data) * 2
+        lower_band = data - self.get_rsd(data) * 2
         return upper_band, lower_band
