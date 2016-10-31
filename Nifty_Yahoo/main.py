@@ -5,8 +5,9 @@ import os
 import pandas as pd
 import numpy as np
 import symbol as s
-import mlearn as ml
+import unsup_mlearn as ml
 import cluster as cl
+
 
 RISK_FREE_RET = 0
 def is_non_zero_file(fpath):
@@ -34,7 +35,7 @@ def save_pickle(obj, pickle_path=None):
     pickle.dump(obj, pickle_out)
     pickle_out.close()
 
-def load_all(pickle_path,interval, fresh_load=False):
+def load_all(pickle_path, interval, fresh_load=False):
     '''Load symbol data fro pickle or freshly from Yahoo servers'''
     # Checking if Pickle file for stock prices is present'''
     if is_non_zero_file(pickle_path) and not fresh_load:
@@ -51,28 +52,26 @@ def load_all(pickle_path,interval, fresh_load=False):
 
 def should_i_invest(symbol):
     '''Temporary method for '''
-    clf, X_test, y_test = ml.fit_model(symbol.data)
-    score = round(clf.score(X_test, y_test)*100, 2)
+    X = symbol.data.copy()
+    clf, X_test, y_test = ml.fit_model(X)
+    score = clf.score(X_test, y_test)
     # To avoid error the array has to be resized
-    future_prices = np.array(symbol.data.ix[-1, 0:-2]).reshape(1, -1)
+    future_prices = np.array(X.ix[-1, 0:-2]).reshape(1, -1)
     prediction = clf.predict(future_prices)
-    prediction = 'invest' if prediction == 1 else 'not invest'
-    print('You should {} with {}% certainity'.format(prediction, score))
+    score = score*100 if prediction == 1 else (1-score)*100
+    print('You can invest with {}% certainity'.format(round(score, 2)))
 
 def main():
     """Main method for Proceeding"""
     interval = (0, 0, 5)
-    pickle_path = 'C:\\users\\Akash\\Documents\\Github\\Data Sets\\Yahoo\\Nifty_5year.pickle'
+    pickle_path = 'C:\\users\\Akash\\Documents\\Github\\Data Sets\\Yahoo\\Nifty_10year.pickle'
 
     print("Lets start")
     symbol = load_all(pickle_path, interval)
 
     should_i_invest(symbol)
-    norm = symbol.get_normalised_portifolio(symbol.data).ix[:,:-1]
-    print(norm)
-    #print(symbol.data.ix[:, 'INFRATEL']/symbol.data.ix[0, 'INFRATEL'])
-    cl.load_cluster(norm.T)
-    #print(symbol.data.T)
+
+    cl.load_cluster(stock_data=symbol.data.T, n_clusters=5)
 
 
 if __name__ == '__main__':
