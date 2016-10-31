@@ -16,7 +16,7 @@ def is_non_zero_file(fpath):
 def load_symbol_object(interval):
     '''Load stock historicl prices with default initial values'''
     # Default values initialised
-    symbols_file = 'C:\\users\\Akash\\Documents\\Github\\Data Sets\\Quandl\\NSE100_Symbols.csv'
+    symbols_file = '.\\..\\..\\Github\\Data Sets\\Quandl\\NSE100_Symbols.csv'
     symbol_list = pd.read_csv(symbols_file)
 
     # Create a symbol object with the historical data of the stocks in input file
@@ -27,7 +27,7 @@ def load_symbol_object(interval):
 def save_pickle(obj, pickle_path=None):
     '''Save the passed object to the local dataset path'''
     if pickle_path is None:
-        pickle_path = 'C:\\users\\Akash\\Documents\\Github\\Data Sets\\Yahoo\\Nifty.pickle'
+        pickle_path = '.\\..\\..\\Github\\Data Sets\\Yahoo\\Nifty.pickle'
 
     # Saving the Stock data to a pickle for easier access
     pickle_out = open(pickle_path, 'wb')
@@ -62,7 +62,7 @@ def should_i_invest(symbol):
 def main():
     """Main method for Proceeding"""
     interval = (0, 0, 1)
-    pickle_path = 'C:\\users\\Akash\\Documents\\Github\\Data Sets\\Quandl\\Symbol.pickle'
+    pickle_path = '.\\..\\..\\Github\\Data Sets\\Quandl\\Symbol.pickle'
 
     print("Lets start")
     symbol = load_all(pickle_path, interval)
